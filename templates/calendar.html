@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Kalendar{% endblock %}
+{% block page_title %}Akademik kalendar{% endblock %}
+{% block page_subtitle %}Topshiriqlar, muddatlar va yaqin voqealar{% endblock %}
+{% block content %}
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Yaqin voqealar</h3>
+          <p>Topshiriqlar va muhim sanalar</p>
+        </div>
+      </div>
+      <div class="timeline-list">
+        {% for event in events %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div>
+              <strong>{{ event.title }}</strong>
+              <p>{{ event.meta }}</p>
+            </div>
+            <time>{{ event.date.strftime('%d.%m.%Y') }}</time>
+          </div>
+        {% else %}
+          <p>Hozircha yaqin voqealar topilmadi.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>So'nggi baholar</h3>
+          <p>Talaba uchun oxirgi natijalar, boshqalar uchun umumiy ma'lumot bloki</p>
+        </div>
+      </div>
+      <div class="simple-list">
+        {% for grade in recent_grades %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ grade.subject.name }}</strong>
+              <span>{{ grade.comment or "Izoh yo'q" }}</span>
+            </div>
+            <time>{{ grade.score }}</time>
+          </div>
+        {% else %}
+          <p>Bu bo'limda ko'rsatish uchun ma'lumot yo'q.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

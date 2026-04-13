@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Hisobotlar{% endblock %}
+{% block page_title %}Hisobotlar markazi{% endblock %}
+{% block page_subtitle %}Davomat va baholarni filtrlash orqali ko'rish{% endblock %}
+{% block content %}
+  <section class="panel-card">
+    <details class="filter-box" open>
+      <summary>Filterlar va eksport</summary>
+      <form method="get" class="toolbar">
+        <select name="group_id">
+          <option value="">Barcha guruhlar</option>
+          {% for group in groups %}
+            <option value="{{ group.id }}" {% if request.args.get('group_id') == group.id|string %}selected{% endif %}>{{ group.name }}</option>
+          {% endfor %}
+        </select>
+        <select name="subject_id">
+          <option value="">Barcha fanlar</option>
+          {% for subject in subjects %}
+            <option value="{{ subject.id }}" {% if request.args.get('subject_id') == subject.id|string %}selected{% endif %}>{{ subject.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="date" name="date_from" value="{{ request.args.get('date_from', '') }}">
+        <input type="date" name="date_to" value="{{ request.args.get('date_to', '') }}">
+        <button class="btn btn-primary" type="submit">Hisobotni yangilash</button>
+        <a class="btn btn-secondary" href="{{ url_for('reports_page', group_id=request.args.get('group_id',''), subject_id=request.args.get('subject_id',''), date_from=request.args.get('date_from',''), date_to=request.args.get('date_to',''), export='attendance') }}">Davomat CSV</a>
+        <a class="btn btn-secondary" href="{{ url_for('reports_page', group_id=request.args.get('group_id',''), subject_id=request.args.get('subject_id',''), date_from=request.args.get('date_from',''), date_to=request.args.get('date_to',''), export='grades') }}">Baho CSV</a>
+      </form>
+    </details>
+  </section>
+
+  <section class="panel-card">
+    <h3>Davomat hisoboti</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Talaba</th>
+            <th>Guruh</th>
+            <th>Fan</th>
+            <th>Sana</th>
+            <th>Holat</th>
+            <th>Sabab</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in attendance_rows %}
+            <tr>
+              <td>{{ row.student.full_name }}</td>
+              <td>{{ row.group.name }}</td>
+              <td>{{ row.subject.name }}</td>
+              <td>{{ row.date.strftime('%d.%m.%Y') }}</td>
+              <td><span class="status-badge status-{{ row.status }}">{{ status_labels.get(row.status, row.status) }}</span></td>
+              <td>{{ row.reason or '-' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6">Davomat ma'lumotlari topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <h3>Baho hisoboti</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Talaba</th>
+            <th>Fan</th>
+            <th>Baho</th>
+            <th>Izoh</th>
+            <th>Sana</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in grade_rows %}
+            <tr>
+              <td>{{ row.student.full_name }}</td>
+              <td>{{ row.subject.name }}</td>
+              <td>{{ row.score }}</td>
+              <td>{{ row.comment or '-' }}</td>
+              <td>{{ row.date.strftime('%d.%m.%Y') }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">Baho ma'lumotlari topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

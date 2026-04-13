@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Baholar{% endblock %}
+{% block page_title %}Baho moduli{% endblock %}
+{% block page_subtitle %}Fan va guruh bo'yicha baholarni kiritish{% endblock %}
+{% block content %}
+  <section class="panel-card">
+    <form method="get" class="toolbar">
+      <select name="group_id">
+        {% for group in groups %}
+          <option value="{{ group.id }}" {% if selected_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="subject_id">
+        {% for subject in subjects %}
+          <option value="{{ subject.id }}" {% if selected_subject_id == subject.id %}selected{% endif %}>{{ subject.name }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary" type="submit">Ko'rsatish</button>
+    </form>
+  </section>
+
+  <section class="panel-card">
+    <form method="post">
+      <input type="hidden" name="group_id" value="{{ selected_group_id }}">
+      <input type="hidden" name="subject_id" value="{{ selected_subject_id }}">
+      <div class="form-field max-240">
+        <span>Sana</span>
+        <input type="date" name="grade_date" value="{{ today.isoformat() }}">
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Talaba</th>
+              <th>Oxirgi baho</th>
+              <th>Yangi baho</th>
+              <th>Izoh</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+              {% set latest = latest_grades.get(student.id) %}
+              <tr>
+                <td>{{ student.full_name }}</td>
+                <td>{{ latest.score if latest else '-' }}</td>
+                <td><input type="number" step="0.1" min="0" max="5" name="score_{{ student.id }}" placeholder="Masalan: 4.5"></td>
+                <td><input type="text" name="comment_{{ student.id }}" placeholder="Izoh kiriting"></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4">Talabalar topilmadi.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if students %}
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Baholarni saqlash</button>
+        </div>
+      {% endif %}
+    </form>
+  </section>
+{% endblock %}

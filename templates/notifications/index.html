@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Bildirishnomalar{% endblock %}
+{% block page_title %}Bildirishnomalar{% endblock %}
+{% block page_subtitle %}Sizga kelgan barcha muhim xabarlar{% endblock %}
+{% block content %}
+  <section class="panel-card">
+    <div class="section-head">
+      <div>
+        <h3>Bildirishnomalar markazi</h3>
+        <p>O'qilgan va o'qilmagan xabarlarni boshqaring</p>
+      </div>
+      <div class="row-actions">
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('notification_page') }}">Barchasi</a>
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('notification_page', filter='info') }}">Topshiriq/Chat</a>
+        <a class="btn btn-secondary btn-sm" href="{{ url_for('notification_page', filter='success') }}">Baholanganlar</a>
+        <form method="post" action="{{ url_for('notification_read_all') }}">
+          <button class="btn btn-primary btn-sm" type="submit">Hammasini o'qildi qilish</button>
+        </form>
+      </div>
+    </div>
+    <div class="simple-list notifications-list">
+      {% for item in notifications %}
+        {% if item.target_url %}
+          <a href="{{ item.target_url }}" class="notification-link">
+            <article class="notification-item {% if not item.is_read %}notification-unread{% endif %}">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.message }}</p>
+              </div>
+              <time>{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</time>
+            </article>
+          </a>
+        {% else %}
+          <article class="notification-item {% if not item.is_read %}notification-unread{% endif %}">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.message }}</p>
+            </div>
+              <time>{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</time>
+            </article>
+        {% endif %}
+        <form method="post" action="{{ url_for('notification_toggle', notification_id=item.id) }}" class="inline-form">
+          <button class="btn btn-secondary btn-sm" type="submit">{{ "O'qilmagan qilish" if item.is_read else "O'qildi qilish" }}</button>
+        </form>
+      {% else %}
+        <p>Hozircha bildirishnomalar yo'q.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

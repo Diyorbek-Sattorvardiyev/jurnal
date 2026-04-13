@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Profil{% endblock %}
+{% block page_title %}Mening profilim{% endblock %}
+{% block page_subtitle %}Shaxsiy ma'lumotlar va profil rasmi{% endblock %}
+{% block content %}
+  <section class="content-grid">
+    <div class="panel-card center-card">
+      <img src="{{ avatar_url(current_user) }}" alt="Avatar" class="profile-avatar-lg">
+      <h3>{{ current_user.full_name }}</h3>
+      <p>{{ role_labels.get(current_user.role, current_user.role) }}</p>
+      <p>{{ current_user.group.name if current_user.group else '' }}</p>
+      <div class="tag-list">
+        <span class="tag">{{ current_user.email or "Email kiritilmagan" }}</span>
+        <span class="tag">{{ current_user.phone or "Telefon kiritilmagan" }}</span>
+      </div>
+    </div>
+
+    <div class="panel-card form-card">
+      <form method="post" enctype="multipart/form-data" class="grid-form">
+        <div class="form-field">
+          <span>To'liq ism</span>
+          <input type="text" name="full_name" value="{{ current_user.full_name }}" required>
+        </div>
+        <div class="form-field">
+          <span>Telefon</span>
+          <input type="text" name="phone" value="{{ current_user.phone or '' }}">
+        </div>
+        <div class="form-field">
+          <span>Email</span>
+          <input type="email" name="email" value="{{ current_user.email or '' }}">
+        </div>
+        <div class="form-field">
+          <span>Profil rasmi</span>
+          <input type="file" name="image" accept="image/*" data-image-input>
+        </div>
+        <div class="form-field">
+          <span>Joriy parol</span>
+          <input type="password" name="current_password" placeholder="Parolni almashtirish uchun kiriting">
+        </div>
+        <div class="form-field">
+          <span>Yangi parol</span>
+          <input type="password" name="new_password" placeholder="Yangi parol">
+        </div>
+        <div class="form-field full">
+          <span>Oldindan ko'rish</span>
+          <img src="{{ avatar_url(current_user) }}" alt="Oldindan ko'rish" class="preview-image" data-image-preview>
+        </div>
+        <div class="form-actions full">
+          <button class="btn btn-primary" type="submit">Profilni saqlash</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="section-head">
+      <div>
+        <h3>Faoliyat tarixi</h3>
+        <p>Profil va kabinet bo'yicha oxirgi amallar</p>
+      </div>
+    </div>
+    <div class="simple-list">
+      {% for item in recent_activities %}
+        <div class="simple-list-item">
+          <div>
+            <strong>{{ item.message }}</strong>
+            <span>{{ item.category }}</span>
+          </div>
+          <time>{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</time>
+        </div>
+      {% else %}
+        <p>Faoliyatlar topilmadi.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Sinf chatlari{% endblock %}
+{% block page_title %}Chat bo'limi{% endblock %}
+{% block page_subtitle %}Guruh ichidagi tezkor yozishmalar{% endblock %}
+{% block content %}
+  <section class="panel-card">
+    <form method="get" class="toolbar">
+      <div class="mode-switch">
+        <label class="status-choice">
+          <input type="radio" name="mode" value="group" {% if chat_mode == 'group' %}checked{% endif %}>
+          <span>Guruh chat</span>
+        </label>
+        <label class="status-choice">
+          <input type="radio" name="mode" value="private" {% if chat_mode == 'private' %}checked{% endif %}>
+          <span>Shaxsiy chat</span>
+        </label>
+      </div>
+      <select name="group_id" {% if not groups or chat_mode != 'group' %}disabled{% endif %}>
+        {% for group in groups %}
+          <option value="{{ group.id }}" {% if selected_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="user_id" {% if not private_users or chat_mode != 'private' %}disabled{% endif %}>
+        {% for user in private_users %}
+          <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ user.full_name }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary" type="submit">Ko'rsatish</button>
+    </form>
+  </section>
+
+  <section class="chat-layout">
+    <div class="panel-card chat-window">
+      <div class="chat-stream">
+        {% for item in messages %}
+          <article class="chat-message {% if item.sender_id == current_user.id %}chat-own{% endif %}">
+            <div class="chat-bubble">
+              <strong>{{ item.sender.full_name }}</strong>
+              <span class="chat-meta">{{ role_labels.get(item.sender.role, item.sender.role) }} • {{ item.created_at.strftime('%d.%m.%Y %H:%M') }}{% if item.receiver_id and item.seen_at %} • ko'rildi{% endif %}</span>
+              <p>{{ item.message }}</p>
+              {% if item.file_path %}
+                <a class="file-link" href="{{ document_url(item.file_path) }}" target="_blank">Biriktirilgan fayl</a>
+              {% endif %}
+            </div>
+          </article>
+        {% else %}
+          <p>Ushbu guruh uchun chat xabarlari hali yo'q.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Yangi xabar</h3>
+      <form method="post" class="grid-form" enctype="multipart/form-data">
+        <input type="hidden" name="mode" value="{{ chat_mode }}">
+        <input type="hidden" name="group_id" value="{{ selected_group_id or '' }}">
+        <input type="hidden" name="user_id" value="{{ selected_user_id or '' }}">
+        <div class="form-field full">
+          <span>Xabar matni</span>
+          <textarea name="message" placeholder="Sinf yoki foydalanuvchi uchun xabar yozing..." {% if (chat_mode == 'group' and not selected_group_id) or (chat_mode == 'private' and not selected_user_id) %}disabled{% endif %}></textarea>
+        </div>
+        <div class="form-field full">
+          <span>Fayl biriktirish</span>
+          <input type="file" name="chat_file" accept=".pdf,.doc,.docx,.xls,.xlsx">
+        </div>
+        <div class="form-actions full">
+          <button class="btn btn-primary" type="submit" {% if (chat_mode == 'group' and not selected_group_id) or (chat_mode == 'private' and not selected_user_id) %}disabled{% endif %}>Yuborish</button>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

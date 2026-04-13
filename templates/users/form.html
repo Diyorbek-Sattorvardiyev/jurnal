@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ "Foydalanuvchini tahrirlash" if user else "Foydalanuvchi qo'shish" }}{% endblock %}
+{% block page_title %}{{ "Foydalanuvchini tahrirlash" if user else "Foydalanuvchi qo'shish" }}{% endblock %}
+{% block page_subtitle %}Login, parol, kontakt ma'lumotlari va profil rasmi{% endblock %}
+{% block content %}
+  <section class="panel-card form-card">
+    <form method="post" enctype="multipart/form-data" class="grid-form" data-user-form>
+      <div class="form-field">
+        <span>To'liq ism</span>
+        <input type="text" name="full_name" value="{{ user.full_name if user else '' }}" required>
+      </div>
+      <div class="form-field">
+        <span>Login</span>
+        <input type="text" name="username" value="{{ user.username if user else '' }}" required>
+      </div>
+      <div class="form-field">
+        <span>{{ "Yangi parol" if user else "Parol" }}</span>
+        <input type="password" name="password" {% if not user %}required{% endif %}>
+      </div>
+      <div class="form-field">
+        <span>Rol</span>
+        {% if current_user.role == 'teacher' %}
+          <input type="text" value="Talaba" disabled>
+          <input type="hidden" name="role" value="student">
+        {% else %}
+          <select name="role" data-role-select>
+            {% for role in ['admin', 'teacher', 'student'] %}
+              <option value="{{ role }}" {% if user and user.role == role %}selected{% endif %}>{{ role_labels.get(role, role) }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+      </div>
+      <div class="form-field">
+        <span>Telefon</span>
+        <input type="text" name="phone" value="{{ user.phone if user else '' }}">
+      </div>
+      <div class="form-field">
+        <span>Email</span>
+        <input type="email" name="email" value="{{ user.email if user else '' }}">
+      </div>
+      <div class="form-field group-only {% if user and user.role != 'student' %}hidden{% endif %}">
+        <span>Guruh</span>
+        <select name="group_id">
+          <option value="">Tanlang</option>
+          {% for group in groups %}
+            <option value="{{ group.id }}" {% if user and user.group and user.group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <span>Profil rasmi</span>
+        <input type="file" name="image" accept="image/*" data-image-input>
+      </div>
+      <div class="form-field full">
+        <span>Rasmni oldindan ko'rish</span>
+        <img src="{{ avatar_url(user) if user else url_for('static', filename='uploads/default-avatar.svg') }}" alt="Oldindan ko'rish" class="preview-image" data-image-preview>
+      </div>
+      <div class="form-field full">
+        <span>Eslatma</span>
+        <div class="demo-box">
+          Talaba qo'shilgandan keyin unga shu login va parol bilan tizimga kirish mumkin bo'ladi.
+        </div>
+      </div>
+      <div class="form-actions full">
+        <a class="btn btn-secondary" href="{{ url_for('user_list' if current_user.role == 'admin' else 'student_list') }}">Bekor qilish</a>
+        <button class="btn btn-primary" type="submit">Saqlash</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

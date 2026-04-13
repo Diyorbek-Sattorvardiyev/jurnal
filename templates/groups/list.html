@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Guruhlar{% endblock %}
+{% block page_title %}Guruhlar boshqaruvi{% endblock %}
+{% block page_subtitle %}Sinf va akademik guruhlarni yaratish hamda tahrirlash{% endblock %}
+{% block content %}
+  <section class="content-grid">
+    <div class="panel-card">
+      <h3>Yangi guruh</h3>
+      <form method="post" class="inline-form">
+        <input type="text" name="name" placeholder="Masalan: 11-A" required>
+        <button class="btn btn-primary" type="submit">Saqlash</button>
+      </form>
+    </div>
+
+    <div class="panel-card">
+      <h3>Mavjud guruhlar</h3>
+      <div class="simple-list">
+        {% for group in groups %}
+          <div class="simple-list-item simple-list-item-wrap">
+            <form method="post" class="inline-form compact-form">
+              <input type="hidden" name="edit_id" value="{{ group.id }}">
+              <input type="text" name="name" value="{{ group.name }}" required>
+              <button class="btn btn-secondary btn-sm" type="submit">Yangilash</button>
+            </form>
+            <form method="post" action="{{ url_for('delete_group', group_id=group.id) }}">
+              <button class="btn btn-danger btn-sm" type="submit" data-confirm="Guruh o'chirilsinmi?">O'chirish</button>
+            </form>
+          </div>
+        {% else %}
+          <p>Guruhlar mavjud emas.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

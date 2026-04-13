@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Talaba kabineti{% endblock %}
+{% block page_title %}Talaba kabineti{% endblock %}
+{% block page_subtitle %}Shaxsiy natijalar, davomat va topshiriqlar{% endblock %}
+{% block content %}
+  <section class="stats-grid">
+    <div class="stat-card"><span>O'rtacha baho</span><strong>{{ grade_avg }}</strong></div>
+    <div class="stat-card"><span>Davomat</span><strong>{{ attendance_rate }}%</strong></div>
+    <div class="stat-card"><span>Yaqin deadline</span><strong>{{ nearest_deadline.deadline.strftime('%d.%m') if nearest_deadline else '-' }}</strong></div>
+    <div class="stat-card"><span>Yangi bildirishnoma</span><strong>{{ notifications|length }}</strong></div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card profile-summary">
+      <img src="{{ avatar_url(current_user) }}" alt="Avatar" class="profile-avatar-lg">
+      <div>
+        <h3>{{ current_user.full_name }}</h3>
+        <p>{{ current_user.group.name if current_user.group else "Guruh biriktirilmagan" }}</p>
+        <div class="tag-list">
+          <span class="tag">O'rtacha baho: {{ grade_avg }}</span>
+          <span class="tag">Davomat: {{ attendance_rate }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Topshiriqlar</h3>
+      <div class="simple-list">
+        {% for assignment in assignments %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ assignment.title }}</strong>
+              <span>{{ assignment.subject.name }}</span>
+            </div>
+            <time>{{ assignment.deadline.strftime('%d.%m.%Y') }}</time>
+          </div>
+        {% else %}
+          <p>Topshiriqlar mavjud emas.</p>
+        {% endfor %}
+      </div>
+      {% if latest_feedback %}
+        <div class="grade-note">
+          <strong>Oxirgi feedback</strong>
+          <p>{{ latest_feedback.feedback }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Bildirishnomalar</h3>
+          <p>O'qituvchi va tizim yuborgan xabarlar</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('notification_page') }}">Barchasi</a>
+      </div>
+      <div class="simple-list">
+        {% for item in notifications %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.message }}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Bildirishnomalar mavjud emas.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Guruh chatidan lavhalar</h3>
+          <p>Sinfingizdagi so'nggi muloqotlar</p>
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('chat_page') }}">Chatga o'tish</a>
+      </div>
+      <div class="simple-list">
+        {% for item in group_chat %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.sender.full_name }}</strong>
+              <span>{{ item.message[:58] }}{% if item.message|length > 58 %}...{% endif %}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Guruh chatida hali xabar yo'q.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="section-head">
+      <div>
+        <h3>So'nggi baholar</h3>
+        <p>Fanlar bo'yicha oxirgi natijalar</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fan</th>
+            <th>Sana</th>
+            <th>Baho</th>
+            <th>Izoh</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grade in grades %}
+            <tr>
+              <td>{{ grade.subject.name }}</td>
+              <td>{{ grade.date.strftime('%d.%m.%Y') }}</td>
+              <td>{{ grade.score }}</td>
+              <td>{{ grade.comment or "-" }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">Baholar topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="section-head">
+      <div>
+        <h3>Davomat tarixi</h3>
+        <p>Oxirgi kiritilgan holatlar</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fan</th>
+            <th>Sana</th>
+            <th>Holat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in attendance %}
+            <tr>
+              <td>{{ item.subject.name }}</td>
+              <td>{{ item.date.strftime('%d.%m.%Y') }}</td>
+              <td><span class="status-badge status-{{ item.status }}">{{ status_labels.get(item.status, item.status) }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3">Davomat ma'lumotlari topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

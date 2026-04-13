@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Login | Elektron Jurnal{% endblock %}
+{% block auth_content %}
+  <div class="login-shell">
+    <section class="login-hero">
+      <div class="hero-card">
+        <span class="eyebrow">Elektron jurnal</span>
+        <h2>Ta'lim markazingiz uchun zamonaviy, qulay va to'liq o'zbekcha boshqaruv oynasi</h2>
+        <p>O'qituvchi talabaga login va parol beradi, topshiriq yaratadi, sinf bo'ylab bildirishnoma yuboradi va bir joyning o'zida chat orqali muloqot qiladi.</p>
+        <div class="login-visual">
+          <img src="{{ url_for('static', filename='img/login-education.svg') }}" alt="Ta'lim illyustratsiyasi">
+        </div>
+        <ul class="hero-points">
+          <li>Administrator, o'qituvchi va talaba rollari</li>
+          <li>Topshiriq, bildirishnoma va sinf chatlari</li>
+          <li>Telefon, planshet va kompyuter uchun moslashuvchan dizayn</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="login-panel">
+      <form class="login-form-card" method="post">
+        <div>
+          <h1>Tizimga kirish</h1>
+          <p>Login va parol orqali kabinetga kiring</p>
+        </div>
+
+        <label class="form-field">
+          <span>Login</span>
+          <input type="text" name="username" placeholder="Masalan: admin" required>
+        </label>
+
+        <label class="form-field">
+          <span>Parol</span>
+          <input type="password" name="password" placeholder="Parolni kiriting" required>
+        </label>
+
+        <button class="btn btn-primary btn-full" type="submit">Kirish</button>
+
+        <div class="demo-box">
+          <strong>Sinov uchun kirishlar</strong>
+          <p><b>Administrator:</b> admin / admin123</p>
+          <p><b>O'qituvchi:</b> teacher / teacher123</p>
+          <p><b>Talaba:</b> student / student123</p>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

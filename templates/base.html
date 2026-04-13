@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Elektron Jurnal Tizimi{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  {% if current_user.is_authenticated %}
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="{{ url_for('dashboard_router') }}">
+          <div class="brand-logo">EJ</div>
+          <div>
+            <strong>Elektron Jurnal</strong>
+            <span>Ta'lim boshqaruvi</span>
+          </div>
+        </a>
+
+        <nav class="sidebar-nav">
+          {% for endpoint, label in nav_items %}
+            <a href="{{ url_for(endpoint) }}" class="{% if request.endpoint == endpoint %}active{% endif %}">
+              <span>{{ label }}</span>
+              {% if endpoint == 'notification_page' and unread_notifications %}
+                <span class="nav-badge">{{ unread_notifications }}</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+        </nav>
+
+        <div class="sidebar-footer">
+          <a href="{{ url_for('logout') }}" class="logout-link">Chiqish</a>
+        </div>
+      </aside>
+
+      <div class="main-area">
+        <header class="topbar">
+          <button class="mobile-toggle" type="button" data-toggle-sidebar>☰</button>
+          <div class="topbar-title">
+            <h1>{% block page_title %}Elektron Jurnal Tizimi{% endblock %}</h1>
+            <p>{% block page_subtitle %}Akademik boshqaruv paneli{% endblock %}</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="theme-toggle" type="button" data-theme-toggle>Rejim</button>
+            <div class="topbar-user">
+              <img src="{{ avatar_url(current_user) }}" alt="Avatar" class="avatar">
+              <div>
+                <strong>{{ current_user.full_name }}</strong>
+                <span>{{ role_labels.get(current_user.role, current_user.role) }}</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="page-content">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="flash-stack">
+                {% for category, message in messages %}
+                  <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+  {% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack login-flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

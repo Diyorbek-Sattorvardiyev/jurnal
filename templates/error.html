@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Xatolik{% endblock %}
+{% block page_title %}Xatolik {{ code }}{% endblock %}
+{% block page_subtitle %}So'ralgan amal bajarilmadi{% endblock %}
+{% block content %}
+  <section class="panel-card center-card">
+    <h2>{{ message }}</h2>
+    <p>Sahifani yangilab ko'ring yoki bosh sahifaga qayting.</p>
+    <a class="btn btn-primary" href="{{ url_for('dashboard_router') if current_user.is_authenticated else url_for('login') }}">Orqaga qaytish</a>
+  </section>
+{% endblock %}

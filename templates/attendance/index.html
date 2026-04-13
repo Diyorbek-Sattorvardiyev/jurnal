@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Davomat{% endblock %}
+{% block page_title %}Davomat moduli{% endblock %}
+{% block page_subtitle %}Guruh, fan va sana bo'yicha davomat kiritish{% endblock %}
+{% block content %}
+  <section class="panel-card">
+    <form method="get" class="toolbar">
+      <select name="group_id">
+        {% for group in groups %}
+          <option value="{{ group.id }}" {% if selected_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="subject_id">
+        {% for subject in subjects %}
+          <option value="{{ subject.id }}" {% if selected_subject_id == subject.id %}selected{% endif %}>{{ subject.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-field compact-field">
+        <span>Sana</span>
+        <input type="date" name="date" value="{{ selected_date }}">
+      </div>
+      <button class="btn btn-secondary" type="submit">Ko'rsatish</button>
+    </form>
+  </section>
+
+  <section class="panel-card">
+    <form method="post">
+      <input type="hidden" name="group_id" value="{{ selected_group_id }}">
+      <input type="hidden" name="subject_id" value="{{ selected_subject_id }}">
+      <input type="hidden" name="date" value="{{ selected_date }}">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Talaba</th>
+              <th>Guruh</th>
+              <th>Holat</th>
+              <th>Sabab</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+              {% set current = existing.get(student.id) %}
+              <tr>
+                <td>{{ student.full_name }}</td>
+                <td>{{ student.group.name if student.group else '-' }}</td>
+                <td>
+                  <div class="status-toggle">
+                    {% for status, label in status_options %}
+                      <label class="status-choice status-{{ status }}">
+                        <input type="radio" name="status_{{ student.id }}" value="{{ status }}" {% if (current and current.status == status) or (not current and status == 'present') %}checked{% endif %}>
+                        <span>{{ label }}</span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td>
+                  <input type="text" name="reason_{{ student.id }}" value="{{ current.reason if current and current.reason else '' }}" placeholder="Masalan: kasal, uzrli, darsda faol">
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="4">Talabalar topilmadi.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if students %}
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Davomatni saqlash</button>
+        </div>
+      {% endif %}
+    </form>
+  </section>
+{% endblock %}

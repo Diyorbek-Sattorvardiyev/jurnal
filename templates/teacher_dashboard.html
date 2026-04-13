@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}O'qituvchi paneli{% endblock %}
+{% block page_title %}O'qituvchi paneli{% endblock %}
+{% block page_subtitle %}Biriktirilgan fanlar, guruhlar va yaqin topshiriqlar{% endblock %}
+{% block content %}
+  <section class="stats-grid">
+    <div class="stat-card"><span>Bugungi darslar</span><strong>{{ today_lessons }}</strong></div>
+    <div class="stat-card"><span>Tekshirilmagan ishlar</span><strong>{{ pending_submissions }}</strong></div>
+    <div class="stat-card"><span>Kechikkan topshiriqlar</span><strong>{{ overdue_tasks }}</strong></div>
+    <div class="stat-card"><span>Guruhlar</span><strong>{{ groups|length }}</strong></div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Biriktirilgan fanlar</h3>
+          <p>O'zingizga biriktirilgan fanlar ro'yxati</p>
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('grade_page') }}">Baholar</a>
+      </div>
+      <div class="tag-list">
+        {% for subject in subjects %}
+          <span class="tag">{{ subject.name }}</span>
+        {% else %}
+          <span class="muted">Fanlar biriktirilmagan.</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Biriktirilgan guruhlar</h3>
+          <p>Davomat va topshiriqlarni boshqarish uchun</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('attendance_page') }}">Davomat</a>
+      </div>
+      <div class="tag-list">
+        {% for group in groups %}
+          <span class="tag">{{ group.name }}</span>
+        {% else %}
+          <span class="muted">Guruhlar mavjud emas.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Yaqin topshiriqlar</h3>
+          <p>Deadline bo'yicha eng yaqin topshiriqlar</p>
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('assignment_page') }}">Yaratish</a>
+      </div>
+      <div class="simple-list">
+        {% for assignment in assignments %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ assignment.title }}</strong>
+              <span>{{ assignment.subject.name }} - {{ assignment.group.name }}</span>
+            </div>
+            <time>{{ assignment.deadline.strftime('%d.%m.%Y') }}</time>
+          </div>
+        {% else %}
+          <p>Topshiriqlar mavjud emas.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>So'nggi baholar</h3>
+          <p>Kiritilgan oxirgi baholar</p>
+        </div>
+      </div>
+      <div class="simple-list">
+        {% for grade in recent_grades %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ grade.student.full_name }}</strong>
+              <span>{{ grade.subject.name }}</span>
+            </div>
+            <time>{{ grade.score }}</time>
+          </div>
+        {% else %}
+          <p>Baholar hali kiritilmagan.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Yangi bildirishnomalar</h3>
+          <p>Topshiriq va tizim xabarlari shu yerda ko'rinadi</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('notification_page') }}">Ochish</a>
+      </div>
+      <div class="simple-list">
+        {% for item in notifications %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.message }}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Hozircha bildirishnomalar yo'q.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Sinf chatlari</h3>
+          <p>Biriktirilgan guruhlar bilan oxirgi yozishmalar</p>
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('chat_page') }}">Chat</a>
+      </div>
+      <div class="simple-list">
+        {% for item in recent_chat %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.sender.full_name }}</strong>
+              <span>{{ item.group.name }}: {{ item.message[:54] }}{% if item.message|length > 54 %}...{% endif %}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Chatda xabarlar topilmadi.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

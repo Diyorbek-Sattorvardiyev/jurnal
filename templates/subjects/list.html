@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Fanlar{% endblock %}
+{% block page_title %}Fanlar va o'qituvchilar{% endblock %}
+{% block page_subtitle %}Fan yaratish, o'qituvchi biriktirish va guruhlarni belgilash{% endblock %}
+{% block content %}
+  <section class="panel-card form-card">
+    <h3>{{ "Fan tahrirlash" if editing_subject else "Yangi fan qo'shish" }}</h3>
+    <form method="post" class="grid-form">
+      {% if editing_subject %}
+        <input type="hidden" name="edit_id" value="{{ editing_subject.id }}">
+      {% endif %}
+      <div class="form-field">
+        <span>Fan nomi</span>
+        <input type="text" name="name" value="{{ editing_subject.name if editing_subject else '' }}" required>
+      </div>
+      <div class="form-field">
+        <span>O'qituvchi</span>
+        <select name="teacher_id">
+          <option value="">Tanlanmagan</option>
+          {% for teacher in teachers %}
+            <option value="{{ teacher.id }}" {% if editing_subject and editing_subject.teacher_id == teacher.id %}selected{% endif %}>{{ teacher.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field full">
+        <span>Biriktiriladigan guruhlar</span>
+        <div class="checkbox-grid">
+          {% for group in groups %}
+            <label class="checkbox-pill">
+              <input type="checkbox" name="group_ids" value="{{ group.id }}" {% if editing_subject and group in editing_subject.groups %}checked{% endif %}>
+              <span>{{ group.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-actions full">
+        {% if editing_subject %}
+          <a class="btn btn-secondary" href="{{ url_for('subject_list') }}">Bekor qilish</a>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">Saqlash</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel-card">
+    <h3>Fanlar ro'yxati</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fan</th>
+            <th>O'qituvchi</th>
+            <th>Guruhlar</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subjects %}
+            <tr>
+              <td>{{ subject.name }}</td>
+              <td>{{ subject.teacher.full_name if subject.teacher else '-' }}</td>
+              <td>
+                {% for group in subject.groups %}
+                  <span class="tag">{{ group.name }}</span>
+                {% else %}
+                  -
+                {% endfor %}
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn-secondary btn-sm" href="{{ url_for('subject_list', edit=subject.id) }}">Tahrirlash</a>
+                  <form method="post" action="{{ url_for('delete_subject', subject_id=subject.id) }}">
+                    <button class="btn btn-danger btn-sm" type="submit" data-confirm="Fan o'chirilsinmi?">O'chirish</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">Fanlar mavjud emas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

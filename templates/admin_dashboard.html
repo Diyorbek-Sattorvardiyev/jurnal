@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Administrator paneli{% endblock %}
+{% block page_title %}Administrator paneli{% endblock %}
+{% block page_subtitle %}Tizimning umumiy ko'rsatkichlari va so'nggi faolliklar{% endblock %}
+{% block content %}
+  <section class="stats-grid">
+    <div class="stat-card"><span>Talabalar</span><strong>{{ total_students }}</strong></div>
+    <div class="stat-card"><span>Faol o'qituvchilar</span><strong>{{ active_teachers }}/{{ total_teachers }}</strong></div>
+    <div class="stat-card"><span>Guruhlar</span><strong>{{ total_groups }}</strong></div>
+    <div class="stat-card"><span>Bugungi davomat</span><strong>{{ today_attendance }}</strong></div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Tezkor amallar</h3>
+          <p>Asosiy boshqaruv bo'limlariga o'ting</p>
+        </div>
+      </div>
+      <div class="quick-links">
+        <a class="quick-link" href="{{ url_for('add_user') }}">Foydalanuvchi qo'shish</a>
+        <a class="quick-link" href="{{ url_for('group_list') }}">Guruh yaratish</a>
+        <a class="quick-link" href="{{ url_for('subject_list') }}">Fan biriktirish</a>
+        <a class="quick-link" href="{{ url_for('reports_page') }}">Hisobotlarni ko'rish</a>
+      </div>
+    </div>
+
+    <div class="panel-card accent-card">
+      <span class="accent-label">Davomat xulosasi</span>
+      <strong>{{ attendance_rate }}%</strong>
+      <p>Tizimga kiritilgan barcha davomat yozuvlari bo'yicha present ulushi.</p>
+      <div class="tag-list">
+        <span class="tag">Kechikkan topshiriqlar: {{ overdue_assignments }}</span>
+        <span class="tag">Yangi xabarlar: {{ unread_notifications_total }}</span>
+        <span class="tag">Fanlar: {{ total_subjects }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>So'nggi bildirishnomalar</h3>
+          <p>Talabalar va foydalanuvchilarga yuborilgan xabarlar</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('notification_page') }}">Hammasi</a>
+      </div>
+      <div class="simple-list">
+        {% for item in recent_notifications %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.user.full_name }}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Bildirishnomalar yo'q.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="section-head">
+        <div>
+          <h3>So'nggi chat xabarlari</h3>
+          <p>Guruhlar bo'yicha oxirgi yozishmalar</p>
+        </div>
+        <a class="btn btn-secondary" href="{{ url_for('chat_page') }}">Chatga o'tish</a>
+      </div>
+      <div class="simple-list">
+        {% for item in recent_chat %}
+          <div class="simple-list-item">
+            <div>
+              <strong>{{ item.sender.full_name }}</strong>
+              <span>{{ item.group.name }} guruhida: {{ item.message[:60] }}{% if item.message|length > 60 %}...{% endif %}</span>
+            </div>
+            <time>{{ item.created_at.strftime('%d.%m %H:%M') }}</time>
+          </div>
+        {% else %}
+          <p>Chat xabarlari topilmadi.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="section-head">
+      <div>
+        <h3>So'nggi faolliklar</h3>
+        <p>Administrator va foydalanuvchilar tomonidan bajarilgan amallar</p>
+      </div>
+    </div>
+    <div class="activity-list">
+      {% for item in activities %}
+        <div class="activity-item">
+          <div>
+            <strong>{{ item.message }}</strong>
+            <span>{{ item.user.full_name if item.user else 'Tizim' }}</span>
+          </div>
+          <time>{{ item.created_at.strftime('%d.%m.%Y %H:%M') }}</time>
+        </div>
+      {% else %}
+        <p>Faolliklar topilmadi.</p>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
