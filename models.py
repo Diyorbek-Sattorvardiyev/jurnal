@@ -23,6 +23,8 @@ class User(UserMixin, TimestampMixin, db.Model):
     phone = db.Column(db.String(30))
     email = db.Column(db.String(120))
     image_path = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    can_change_credentials = db.Column(db.Boolean, default=True, nullable=False)
 
     taught_subjects = db.relationship("Subject", back_populates="teacher", lazy="dynamic")
     student_group = db.relationship("StudentGroup", back_populates="student", uselist=False, cascade="all, delete-orphan")

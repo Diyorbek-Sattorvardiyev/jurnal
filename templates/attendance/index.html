@@ -42,9 +42,9 @@
             {% for student in students %}
               {% set current = existing.get(student.id) %}
               <tr>
-                <td>{{ student.full_name }}</td>
-                <td>{{ student.group.name if student.group else '-' }}</td>
-                <td>
+                <td data-label="Talaba">{{ student.full_name }}</td>
+                <td data-label="Guruh">{{ student.group.name if student.group else '-' }}</td>
+                <td data-label="Holat">
                   <div class="status-toggle">
                     {% for status, label in status_options %}
                       <label class="status-choice status-{{ status }}">
@@ -54,7 +54,7 @@
                     {% endfor %}
                   </div>
                 </td>
-                <td>
+                <td data-label="Sabab">
                   <input type="text" name="reason_{{ student.id }}" value="{{ current.reason if current and current.reason else '' }}" placeholder="Masalan: kasal, uzrli, darsda faol">
                 </td>
               </tr>

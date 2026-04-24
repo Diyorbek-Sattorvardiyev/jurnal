@@ -57,16 +57,16 @@
         <tbody>
           {% for subject in subjects %}
             <tr>
-              <td>{{ subject.name }}</td>
-              <td>{{ subject.teacher.full_name if subject.teacher else '-' }}</td>
-              <td>
+              <td data-label="Fan">{{ subject.name }}</td>
+              <td data-label="O'qituvchi">{{ subject.teacher.full_name if subject.teacher else '-' }}</td>
+              <td data-label="Guruhlar">
                 {% for group in subject.groups %}
                   <span class="tag">{{ group.name }}</span>
                 {% else %}
                   -
                 {% endfor %}
               </td>
-              <td>
+              <td data-label="Amallar">
                 <div class="row-actions">
                   <a class="btn btn-secondary btn-sm" href="{{ url_for('subject_list', edit=subject.id) }}">Tahrirlash</a>
                   <form method="post" action="{{ url_for('delete_subject', subject_id=subject.id) }}">

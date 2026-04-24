@@ -12,6 +12,7 @@
       <div class="tag-list">
         <span class="tag">{{ current_user.email or "Email kiritilmagan" }}</span>
         <span class="tag">{{ current_user.phone or "Telefon kiritilmagan" }}</span>
+        <span class="tag">{{ "Login/parol almashtirish ruxsat etilgan" if current_user.can_change_credentials else "Login/parol uchun admin ruxsati kerak" }}</span>
       </div>
     </div>
 
@@ -30,6 +31,10 @@
           <input type="email" name="email" value="{{ current_user.email or '' }}">
         </div>
         <div class="form-field">
+          <span>Login</span>
+          <input type="text" name="username" value="{{ current_user.username }}" {% if not current_user.can_change_credentials %}disabled{% endif %}>
+        </div>
+        <div class="form-field">
           <span>Profil rasmi</span>
           <input type="file" name="image" accept="image/*" data-image-input>
         </div>
@@ -39,8 +44,14 @@
         </div>
         <div class="form-field">
           <span>Yangi parol</span>
-          <input type="password" name="new_password" placeholder="Yangi parol">
+          <input type="password" name="new_password" placeholder="Yangi parol" {% if not current_user.can_change_credentials %}disabled{% endif %}>
         </div>
+        {% if not current_user.can_change_credentials %}
+          <div class="form-field full">
+            <span>Cheklov</span>
+            <div class="demo-box">Administrator sizga login yoki parolni mustaqil almashtirish ruxsatini vaqtincha yopgan.</div>
+          </div>
+        {% endif %}
         <div class="form-field full">
           <span>Oldindan ko'rish</span>
           <img src="{{ avatar_url(current_user) }}" alt="Oldindan ko'rish" class="preview-image" data-image-preview>

@@ -30,7 +30,8 @@
             <th>To'liq ism</th>
             <th>Rol</th>
             <th>Login</th>
-            <th>Parol holati</th>
+            <th>Holat</th>
+            <th>Ruxsat</th>
             <th>Guruh</th>
             <th>Amallar</th>
           </tr>
@@ -38,16 +39,29 @@
         <tbody>
           {% for user in users %}
             <tr>
-              <td><img class="avatar-table" src="{{ avatar_url(user) }}" alt="{{ user.full_name }}"></td>
-              <td>
+              <td data-label="Foto"><img class="avatar-table" src="{{ avatar_url(user) }}" alt="{{ user.full_name }}"></td>
+              <td data-label="To'liq ism">
                 <strong>{{ user.full_name }}</strong>
                 <div class="subtext">{{ user.email or '-' }}</div>
               </td>
-              <td>{{ role_labels.get(user.role, user.role) }}</td>
-              <td>{{ user.username }}</td>
-              <td>O'rnatilgan</td>
-              <td>{{ user.group.name if user.group else '-' }}</td>
-              <td>
+              <td data-label="Rol">{{ role_labels.get(user.role, user.role) }}</td>
+              <td data-label="Login">{{ user.username }}</td>
+              <td data-label="Holat">
+                {% if user.is_active %}
+                  <span class="status-badge status-present">Aktiv</span>
+                {% else %}
+                  <span class="status-badge status-absent">Bloklangan</span>
+                {% endif %}
+              </td>
+              <td data-label="Ruxsat">
+                {% if user.can_change_credentials %}
+                  <span class="status-badge status-present">Almashtira oladi</span>
+                {% else %}
+                  <span class="status-badge status-late">Admin ruxsati kerak</span>
+                {% endif %}
+              </td>
+              <td data-label="Guruh">{{ user.group.name if user.group else '-' }}</td>
+              <td data-label="Amallar">
                 <div class="row-actions">
                   <a class="btn btn-secondary btn-sm" href="{{ url_for('edit_user', user_id=user.id) }}">Tahrirlash</a>
                   <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}">
@@ -57,7 +71,7 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="7">Foydalanuvchilar topilmadi.</td></tr>
+            <tr><td colspan="8">Foydalanuvchilar topilmadi.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -45,12 +45,12 @@
         <tbody>
           {% for row in attendance_rows %}
             <tr>
-              <td>{{ row.student.full_name }}</td>
-              <td>{{ row.group.name }}</td>
-              <td>{{ row.subject.name }}</td>
-              <td>{{ row.date.strftime('%d.%m.%Y') }}</td>
-              <td><span class="status-badge status-{{ row.status }}">{{ status_labels.get(row.status, row.status) }}</span></td>
-              <td>{{ row.reason or '-' }}</td>
+              <td data-label="Talaba">{{ row.student.full_name }}</td>
+              <td data-label="Guruh">{{ row.group.name }}</td>
+              <td data-label="Fan">{{ row.subject.name }}</td>
+              <td data-label="Sana">{{ row.date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Holat"><span class="status-badge status-{{ row.status }}">{{ status_labels.get(row.status, row.status) }}</span></td>
+              <td data-label="Sabab">{{ row.reason or '-' }}</td>
             </tr>
           {% else %}
             <tr><td colspan="6">Davomat ma'lumotlari topilmadi.</td></tr>
@@ -76,11 +76,11 @@
         <tbody>
           {% for row in grade_rows %}
             <tr>
-              <td>{{ row.student.full_name }}</td>
-              <td>{{ row.subject.name }}</td>
-              <td>{{ row.score }}</td>
-              <td>{{ row.comment or '-' }}</td>
-              <td>{{ row.date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Talaba">{{ row.student.full_name }}</td>
+              <td data-label="Fan">{{ row.subject.name }}</td>
+              <td data-label="Baho">{{ row.score }}</td>
+              <td data-label="Izoh">{{ row.comment or '-' }}</td>
+              <td data-label="Sana">{{ row.date.strftime('%d.%m.%Y') }}</td>
             </tr>
           {% else %}
             <tr><td colspan="5">Baho ma'lumotlari topilmadi.</td></tr>

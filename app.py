@@ -26,6 +26,7 @@ from flask_login import (
 )
 from sqlalchemy import and_, or_
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.utils import secure_filename
 
 from config import Config
@@ -127,6 +128,60 @@ def document_url(filename: str | None) -> str | None:
 def log_activity(message: str, category: str = "info", user_id: int | None = None):
     activity = ActivityLog(user_id=user_id or (current_user.id if current_user.is_authenticated else None), message=message, category=category)
     db.session.add(activity)
+
+
+def commit_or_flash(success_message: str | None = None, error_message: str = "Ma'lumotlarni saqlashda xatolik yuz berdi. Qayta urinib ko'ring.") -> bool:
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        app.logger.exception("Database integrity error")
+        flash("Bunday ma'lumot allaqachon mavjud yoki bog'langan ma'lumot noto'g'ri tanlangan.", "error")
+        return False
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Database save error")
+        flash(error_message, "error")
+        return False
+    if success_message:
+        flash(success_message, "success")
+    return True
+
+
+def flush_or_flash(error_message: str = "Ma'lumotlarni tayyorlashda xatolik yuz berdi. Qayta urinib ko'ring.") -> bool:
+    try:
+        db.session.flush()
+    except IntegrityError:
+        db.session.rollback()
+        app.logger.exception("Database integrity error during flush")
+        flash("Bunday ma'lumot allaqachon mavjud yoki bog'langan ma'lumot noto'g'ri tanlangan.", "error")
+        return False
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Database flush error")
+        flash(error_message, "error")
+        return False
+    return True
+
+
+def parse_iso_date(value: str | None, field_label: str = "Sana") -> date | None:
+    try:
+        return datetime.strptime(value or "", "%Y-%m-%d").date()
+    except ValueError:
+        flash(f"{field_label} noto'g'ri formatda kiritilgan.", "error")
+        return None
+
+
+def parse_score(value: str, field_label: str = "Baho") -> float | None:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        flash(f"{field_label} faqat raqam bo'lishi kerak.", "error")
+        return None
+    if score < 0 or score > 5:
+        flash(f"{field_label} 0 dan 5 gacha bo'lishi kerak.", "error")
+        return None
+    return score
 
 
 def create_notification(user_id: int, title: str, message: str, category: str = "info", target_url: str | None = None):
@@ -365,6 +420,11 @@ def index():
     return redirect(url_for("login"))
 
 
+@app.route("/keep-alive")
+def keep_alive():
+    return {"ok": True, "time": datetime.utcnow().isoformat(timespec="seconds")}
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -375,9 +435,12 @@ def login():
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if not user.is_active:
+                flash("Bu foydalanuvchi vaqtincha bloklangan. Administratorga murojaat qiling.", "error")
+                return render_template("login.html")
             login_user(user)
             db.session.add(ActivityLog(user=user, message="Tizimga muvaffaqiyatli kirdi.", category="success"))
-            db.session.commit()
+            commit_or_flash()
             flash("Tizimga muvaffaqiyatli kirdingiz.", "success")
             return redirect(url_for("dashboard_router"))
         flash("Login yoki parol noto'g'ri.", "error")
@@ -389,7 +452,7 @@ def login():
 @login_required
 def logout():
     db.session.add(ActivityLog(user=current_user, message="Tizimdan chiqdi.", category="info"))
-    db.session.commit()
+    commit_or_flash()
     logout_user()
     flash("Tizimdan chiqdingiz.", "success")
     return redirect(url_for("login"))
@@ -609,6 +672,8 @@ def add_user():
             role=requested_role,
             phone=request.form.get("phone", "").strip(),
             email=request.form.get("email", "").strip(),
+            is_active=request.form.get("is_active") == "on" if current_user.role == "admin" else True,
+            can_change_credentials=request.form.get("can_change_credentials") == "on" if current_user.role == "admin" else True,
         )
         password = request.form.get("password", "")
         if not user.full_name or not user.username or not password:
@@ -624,13 +689,14 @@ def add_user():
             flash("Siz faqat o'zingizga biriktirilgan guruhlarga talaba qo'sha olasiz.", "error")
             return render_template("users/form.html", groups=groups, user=None)
         db.session.add(user)
-        db.session.flush()
+        if not flush_or_flash():
+            return render_template("users/form.html", groups=groups, user=None)
         upsert_student_group(user, request.form.get("group_id"))
         log_activity(f"Yangi foydalanuvchi yaratildi: {user.full_name}", "success")
         create_notification(user.id, "Hisob yaratildi", f"Siz uchun login yaratildi. Login: {user.username}", "success")
-        db.session.commit()
-        flash("Foydalanuvchi muvaffaqiyatli qo'shildi.", "success")
-        return redirect(url_for("user_list" if current_user.role == "admin" else "student_list"))
+        if commit_or_flash("Foydalanuvchi muvaffaqiyatli qo'shildi."):
+            return redirect(url_for("user_list" if current_user.role == "admin" else "student_list"))
+        return render_template("users/form.html", groups=groups, user=None)
 
     return render_template("users/form.html", groups=groups, user=None)
 
@@ -653,6 +719,15 @@ def edit_user(user_id):
         user.role = request.form.get("role", user.role) if current_user.role == "admin" else "student"
         user.phone = request.form.get("phone", "").strip()
         user.email = request.form.get("email", "").strip()
+        if current_user.role == "admin":
+            user.is_active = request.form.get("is_active") == "on"
+            user.can_change_credentials = request.form.get("can_change_credentials") == "on"
+            if user.id == current_user.id:
+                user.is_active = True
+                user.can_change_credentials = True
+        if not user.full_name or not user.username:
+            flash("To'liq ism va login majburiy.", "error")
+            return render_template("users/form.html", groups=groups, user=user)
         if request.form.get("password", "").strip():
             user.set_password(request.form["password"])
         uploaded = save_image(request.files.get("image"))
@@ -666,9 +741,9 @@ def edit_user(user_id):
             return render_template("users/form.html", groups=groups, user=user)
         upsert_student_group(user, request.form.get("group_id"))
         log_activity(f"Foydalanuvchi yangilandi: {user.full_name}", "info")
-        db.session.commit()
-        flash("Foydalanuvchi ma'lumotlari yangilandi.", "success")
-        return redirect(url_for("user_list" if current_user.role == "admin" else "student_list"))
+        if commit_or_flash("Foydalanuvchi ma'lumotlari yangilandi."):
+            return redirect(url_for("user_list" if current_user.role == "admin" else "student_list"))
+        return render_template("users/form.html", groups=groups, user=user)
     return render_template("users/form.html", groups=groups, user=user)
 
 
@@ -683,8 +758,7 @@ def delete_user(user_id):
     full_name = user.full_name
     db.session.delete(user)
     log_activity(f"Foydalanuvchi o'chirildi: {full_name}", "warning")
-    db.session.commit()
-    flash("Foydalanuvchi o'chirildi.", "success")
+    commit_or_flash("Foydalanuvchi o'chirildi.")
     return redirect(url_for("user_list"))
 
 
@@ -700,17 +774,19 @@ def group_list():
             return redirect(url_for("group_list"))
         if edit_id:
             group = db.session.get(Group, int(edit_id))
+            if not group:
+                abort(404)
             group.name = name
             log_activity(f"Guruh yangilandi: {name}", "info")
-            flash("Guruh yangilandi.", "success")
+            success_message = "Guruh yangilandi."
         else:
             if Group.query.filter_by(name=name).first():
                 flash("Bunday guruh mavjud.", "error")
                 return redirect(url_for("group_list"))
             db.session.add(Group(name=name))
             log_activity(f"Yangi guruh yaratildi: {name}", "success")
-            flash("Guruh yaratildi.", "success")
-        db.session.commit()
+            success_message = "Guruh yaratildi."
+        commit_or_flash(success_message)
         return redirect(url_for("group_list"))
     groups = Group.query.order_by(Group.name).all()
     return render_template("groups/list.html", groups=groups)
@@ -726,8 +802,7 @@ def delete_group(group_id):
         return redirect(url_for("group_list"))
     db.session.delete(group)
     log_activity(f"Guruh o'chirildi: {group.name}", "warning")
-    db.session.commit()
-    flash("Guruh o'chirildi.", "success")
+    commit_or_flash("Guruh o'chirildi.")
     return redirect(url_for("group_list"))
 
 
@@ -748,24 +823,26 @@ def subject_list():
             flash("Fan nomi majburiy.", "error")
             return redirect(url_for("subject_list"))
         if edit_id:
-            subject = db.session.get(Subject, int(edit_id))
+            subject = db.session.get(Subject, int(edit_id)) or abort(404)
             subject.name = name
             subject.teacher_id = int(teacher_id) if teacher_id else None
             subject.group_links.clear()
-            db.session.flush()
+            if not flush_or_flash():
+                return redirect(url_for("subject_list"))
             for gid in group_ids:
                 db.session.add(SubjectGroup(subject=subject, group_id=gid))
             log_activity(f"Fan yangilandi: {name}", "info")
-            flash("Fan yangilandi.", "success")
+            success_message = "Fan yangilandi."
         else:
             subject = Subject(name=name, teacher_id=int(teacher_id) if teacher_id else None)
             db.session.add(subject)
-            db.session.flush()
+            if not flush_or_flash():
+                return redirect(url_for("subject_list"))
             for gid in group_ids:
                 db.session.add(SubjectGroup(subject=subject, group_id=gid))
             log_activity(f"Yangi fan qo'shildi: {name}", "success")
-            flash("Fan yaratildi.", "success")
-        db.session.commit()
+            success_message = "Fan yaratildi."
+        commit_or_flash(success_message)
         return redirect(url_for("subject_list"))
 
     edit_subject_id = request.args.get("edit")
@@ -782,8 +859,7 @@ def delete_subject(subject_id):
     subject = db.session.get(Subject, subject_id) or abort(404)
     db.session.delete(subject)
     log_activity(f"Fan o'chirildi: {subject.name}", "warning")
-    db.session.commit()
-    flash("Fan o'chirildi.", "success")
+    commit_or_flash("Fan o'chirildi.")
     return redirect(url_for("subject_list"))
 
 
@@ -818,14 +894,20 @@ def attendance_page():
             .order_by(User.full_name)
             .all()
         )
-    if students and selected_subject_id:
-        attendance_items = Attendance.query.filter_by(group_id=selected_group_id, subject_id=selected_subject_id, date=datetime.strptime(selected_date, "%Y-%m-%d").date()).all()
+    selected_date_value = parse_iso_date(selected_date) if selected_date else date.today()
+    if selected_date_value and students and selected_subject_id:
+        attendance_items = Attendance.query.filter_by(group_id=selected_group_id, subject_id=selected_subject_id, date=selected_date_value).all()
         existing = {item.student_id: item for item in attendance_items}
 
     if request.method == "POST" and selected_group_id and selected_subject_id:
-        current_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        current_date = parse_iso_date(selected_date)
+        if not current_date:
+            return redirect(url_for("attendance_page", group_id=selected_group_id, subject_id=selected_subject_id))
         for student in students:
             status = request.form.get(f"status_{student.id}", "present")
+            if status not in {"present", "absent", "late"}:
+                flash("Davomat holati noto'g'ri tanlangan.", "error")
+                return redirect(url_for("attendance_page", group_id=selected_group_id, subject_id=selected_subject_id, date=selected_date))
             reason = request.form.get(f"reason_{student.id}", "").strip()
             record = existing.get(student.id)
             if record:
@@ -843,8 +925,8 @@ def attendance_page():
                     )
                 )
         log_activity("Davomat ma'lumotlari saqlandi.", "success")
-        db.session.commit()
-        flash("Davomat saqlandi.", "success")
+        if not commit_or_flash("Davomat saqlandi."):
+            return redirect(url_for("attendance_page", group_id=selected_group_id, subject_id=selected_subject_id, date=selected_date))
         return redirect(url_for("attendance_page", group_id=selected_group_id, subject_id=selected_subject_id, date=selected_date))
 
     return render_template(
@@ -884,23 +966,34 @@ def grade_page():
 
     if request.method == "POST" and selected_subject_id:
         grade_date = request.form.get("grade_date") or date.today().isoformat()
+        grade_date_value = parse_iso_date(grade_date)
+        if not grade_date_value:
+            return redirect(url_for("grade_page", group_id=selected_group_id, subject_id=selected_subject_id))
+        saved_count = 0
         for student in students:
             score_raw = request.form.get(f"score_{student.id}", "").strip()
             comment = request.form.get(f"comment_{student.id}", "").strip()
             if not score_raw:
                 continue
+            score_value = parse_score(score_raw)
+            if score_value is None:
+                return redirect(url_for("grade_page", group_id=selected_group_id, subject_id=selected_subject_id))
             grade = Grade(
                 student_id=student.id,
                 subject_id=selected_subject_id,
                 teacher_id=current_user.id if current_user.role == "teacher" else (db.session.get(Subject, selected_subject_id).teacher_id or current_user.id),
-                score=float(score_raw),
+                score=score_value,
                 comment=comment,
-                date=datetime.strptime(grade_date, "%Y-%m-%d").date(),
+                date=grade_date_value,
             )
             db.session.add(grade)
+            saved_count += 1
+        if not saved_count:
+            flash("Saqlash uchun kamida bitta baho kiriting.", "error")
+            return redirect(url_for("grade_page", group_id=selected_group_id, subject_id=selected_subject_id))
         log_activity("Baholar saqlandi.", "success")
-        db.session.commit()
-        flash("Baholar muvaffaqiyatli saqlandi.", "success")
+        if not commit_or_flash("Baholar muvaffaqiyatli saqlandi."):
+            return redirect(url_for("grade_page", group_id=selected_group_id, subject_id=selected_subject_id))
         return redirect(url_for("grade_page", group_id=selected_group_id, subject_id=selected_subject_id))
 
     return render_template(
@@ -952,8 +1045,7 @@ def assignment_page():
                 "info",
             )
             log_activity(f"Talaba topshiriq yukladi: {assignment.title}", "success")
-            db.session.commit()
-            flash("Topshiriq javobi muvaffaqiyatli yuborildi.", "success")
+            commit_or_flash("Topshiriq javobi muvaffaqiyatli yuborildi.")
             return redirect(url_for("assignment_page"))
         if action == "grade_submission":
             if current_user.role not in {"admin", "teacher"}:
@@ -967,9 +1059,8 @@ def assignment_page():
             if not score or not feedback:
                 flash("Bahoni ham, sababini ham kiriting.", "error")
                 return redirect(url_for("assignment_page"))
-            numeric_score = float(score)
-            if numeric_score < 0 or numeric_score > 5:
-                flash("Baho 0 dan 5 gacha bo'lishi kerak.", "error")
+            numeric_score = parse_score(score)
+            if numeric_score is None:
                 return redirect(url_for("assignment_page"))
             submission.score = numeric_score
             submission.feedback = feedback
@@ -981,8 +1072,7 @@ def assignment_page():
                 "success",
             )
             log_activity(f"Topshiriq baholandi: {submission.assignment.title}", "success")
-            db.session.commit()
-            flash("Topshiriq javobi baholandi.", "success")
+            commit_or_flash("Topshiriq javobi baholandi.")
             return redirect(url_for("assignment_page"))
         if current_user.role not in {"admin", "teacher"}:
             abort(403)
@@ -994,6 +1084,9 @@ def assignment_page():
         edit_id = request.form.get("edit_id", type=int)
         if not title or not description or not deadline or not subject_id or not group_id:
             flash("Barcha majburiy maydonlarni to'ldiring.", "error")
+            return redirect(url_for("assignment_page"))
+        deadline_value = parse_iso_date(deadline, "Muddat")
+        if not deadline_value:
             return redirect(url_for("assignment_page"))
         uploaded = save_document(request.files.get("attachment"))
         if request.files.get("attachment") and not uploaded:
@@ -1007,25 +1100,26 @@ def assignment_page():
                 abort(403)
             assignment.title = title
             assignment.description = description
-            assignment.deadline = datetime.strptime(deadline, "%Y-%m-%d").date()
+            assignment.deadline = deadline_value
             assignment.subject_id = subject_id
             assignment.group_id = group_id
             if uploaded:
                 assignment.attachment_path = uploaded
             log_activity(f"Topshiriq yangilandi: {title}", "info")
-            flash("Topshiriq yangilandi.", "success")
+            success_message = "Topshiriq yangilandi."
         else:
             assignment = Assignment(
                 title=title,
                 description=description,
-                deadline=datetime.strptime(deadline, "%Y-%m-%d").date(),
+                deadline=deadline_value,
                 subject_id=subject_id,
                 group_id=group_id,
                 teacher_id=current_user.id if current_user.role == "teacher" else (db.session.get(Subject, subject_id).teacher_id or current_user.id),
                 attachment_path=uploaded,
             )
             db.session.add(assignment)
-            db.session.flush()
+            if not flush_or_flash():
+                return redirect(url_for("assignment_page"))
             assignment_link = f"{url_for('assignment_page', focus=assignment.id)}#assignment-{assignment.id}"
             notify_group_students(
                 group_id,
@@ -1035,8 +1129,8 @@ def assignment_page():
                 target_url=assignment_link,
             )
             log_activity(f"Yangi topshiriq yaratildi: {title}", "success")
-            flash("Topshiriq yaratildi.", "success")
-        db.session.commit()
+            success_message = "Topshiriq yaratildi."
+        commit_or_flash(success_message)
         return redirect(url_for("assignment_page"))
 
     assignments_query = Assignment.query.order_by(Assignment.deadline.asc())
@@ -1089,7 +1183,7 @@ def notification_page():
     unread_ids = [item.id for item in notifications if not item.is_read]
     if unread_ids:
         Notification.query.filter(Notification.id.in_(unread_ids)).update({"is_read": True}, synchronize_session=False)
-        db.session.commit()
+        commit_or_flash()
     return render_template("notifications/index.html", notifications=notifications, filter_type=filter_type)
 
 
@@ -1097,8 +1191,7 @@ def notification_page():
 @login_required
 def notification_read_all():
     current_user.notifications.filter_by(is_read=False).update({"is_read": True}, synchronize_session=False)
-    db.session.commit()
-    flash("Barcha bildirishnomalar o'qilgan deb belgilandi.", "success")
+    commit_or_flash("Barcha bildirishnomalar o'qilgan deb belgilandi.")
     return redirect(url_for("notification_page"))
 
 
@@ -1109,8 +1202,7 @@ def notification_toggle(notification_id):
     if notification.user_id != current_user.id:
         abort(403)
     notification.is_read = not notification.is_read
-    db.session.commit()
-    flash("Bildirishnoma holati yangilandi.", "success")
+    commit_or_flash("Bildirishnoma holati yangilandi.")
     return redirect(url_for("notification_page"))
 
 
@@ -1165,8 +1257,7 @@ def chat_page():
                 )
             )
         log_activity(f"Chatga yangi xabar yuborildi: {(message or 'fayl')[:40]}", "info")
-        db.session.commit()
-        flash("Xabar yuborildi.", "success")
+        commit_or_flash("Xabar yuborildi.")
         return redirect(url_for("chat_page", mode=chat_mode, group_id=selected_group_id, user_id=selected_user_id))
 
     messages = []
@@ -1184,7 +1275,7 @@ def chat_page():
         unseen_ids = [item.id for item in messages if item.receiver_id == current_user.id and item.seen_at is None]
         if unseen_ids:
             ChatMessage.query.filter(ChatMessage.id.in_(unseen_ids)).update({"seen_at": datetime.utcnow()}, synchronize_session=False)
-            db.session.commit()
+            commit_or_flash()
     elif selected_group_id:
         messages = ChatMessage.query.filter_by(group_id=selected_group_id).order_by(ChatMessage.created_at.asc()).all()
     return render_template(
@@ -1208,8 +1299,7 @@ def delete_assignment(assignment_id):
     title = assignment.title
     db.session.delete(assignment)
     log_activity(f"Topshiriq o'chirildi: {title}", "warning")
-    db.session.commit()
-    flash("Topshiriq o'chirildi.", "success")
+    commit_or_flash("Topshiriq o'chirildi.")
     return redirect(url_for("assignment_page"))
 
 
@@ -1305,23 +1395,39 @@ def profile_page():
     if request.method == "POST":
         new_password = request.form.get("new_password", "").strip()
         current_password = request.form.get("current_password", "")
-        if new_password:
+        new_username = request.form.get("username", current_user.username).strip()
+        wants_credentials_change = new_password or new_username != current_user.username
+        if wants_credentials_change:
+            if not current_user.can_change_credentials:
+                flash("Login yoki parolni almashtirish uchun administrator ruxsati kerak.", "error")
+                return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
             if not current_user.check_password(current_password):
                 flash("Joriy parol noto'g'ri.", "error")
                 return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
-            current_user.set_password(new_password)
+            if not new_username:
+                flash("Login bo'sh bo'lishi mumkin emas.", "error")
+                return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
+            if User.query.filter(User.username == new_username, User.id != current_user.id).first():
+                flash("Bu login band.", "error")
+                return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
+            current_user.username = new_username
+            if new_password:
+                current_user.set_password(new_password)
         current_user.full_name = request.form.get("full_name", "").strip()
         current_user.phone = request.form.get("phone", "").strip()
         current_user.email = request.form.get("email", "").strip()
+        if not current_user.full_name:
+            flash("To'liq ism majburiy.", "error")
+            return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
         uploaded = save_image(request.files.get("image"))
         if request.files.get("image") and not uploaded:
             return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
         if uploaded:
             current_user.image_path = uploaded
         log_activity("Profil ma'lumotlari yangilandi.", "info")
-        db.session.commit()
-        flash("Profil yangilandi.", "success")
-        return redirect(url_for("profile_page"))
+        if commit_or_flash("Profil yangilandi."):
+            return redirect(url_for("profile_page"))
+        return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
     return render_template("profile.html", recent_activities=current_user.activities.order_by(ActivityLog.created_at.desc()).limit(10).all())
 
 
@@ -1358,6 +1464,13 @@ def ensure_schema_updates():
 
     if not inspector.has_table("assignment_submissions"):
         AssignmentSubmission.__table__.create(db.engine)
+
+    user_columns = {column["name"] for column in inspector.get_columns("users")} if inspector.has_table("users") else set()
+    with db.engine.begin() as connection:
+        if user_columns and "is_active" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"))
+        if user_columns and "can_change_credentials" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN can_change_credentials BOOLEAN NOT NULL DEFAULT 1"))
 
 
 with app.app_context():

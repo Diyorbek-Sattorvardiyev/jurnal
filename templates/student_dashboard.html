@@ -115,10 +115,10 @@
         <tbody>
           {% for grade in grades %}
             <tr>
-              <td>{{ grade.subject.name }}</td>
-              <td>{{ grade.date.strftime('%d.%m.%Y') }}</td>
-              <td>{{ grade.score }}</td>
-              <td>{{ grade.comment or "-" }}</td>
+              <td data-label="Fan">{{ grade.subject.name }}</td>
+              <td data-label="Sana">{{ grade.date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Baho">{{ grade.score }}</td>
+              <td data-label="Izoh">{{ grade.comment or "-" }}</td>
             </tr>
           {% else %}
             <tr><td colspan="4">Baholar topilmadi.</td></tr>
@@ -147,9 +147,9 @@
         <tbody>
           {% for item in attendance %}
             <tr>
-              <td>{{ item.subject.name }}</td>
-              <td>{{ item.date.strftime('%d.%m.%Y') }}</td>
-              <td><span class="status-badge status-{{ item.status }}">{{ status_labels.get(item.status, item.status) }}</span></td>
+              <td data-label="Fan">{{ item.subject.name }}</td>
+              <td data-label="Sana">{{ item.date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Holat"><span class="status-badge status-{{ item.status }}">{{ status_labels.get(item.status, item.status) }}</span></td>
             </tr>
           {% else %}
             <tr><td colspan="3">Davomat ma'lumotlari topilmadi.</td></tr>

@@ -38,6 +38,26 @@
         <span>Email</span>
         <input type="email" name="email" value="{{ user.email if user else '' }}">
       </div>
+      {% if current_user.role == 'admin' %}
+        <div class="form-field full admin-controls">
+          <span>Admin nazorati</span>
+          <label class="checkbox-pill">
+            <input type="checkbox" name="is_active" {% if not user or user.is_active %}checked{% endif %} {% if user and user.id == current_user.id %}disabled{% endif %}>
+            <span>Foydalanuvchi aktiv</span>
+          </label>
+          {% if user and user.id == current_user.id %}
+            <input type="hidden" name="is_active" value="on">
+          {% endif %}
+          <label class="checkbox-pill">
+            <input type="checkbox" name="can_change_credentials" {% if not user or user.can_change_credentials %}checked{% endif %} {% if user and user.id == current_user.id %}disabled{% endif %}>
+            <span>Login/parolni o'zi almashtira oladi</span>
+          </label>
+          {% if user and user.id == current_user.id %}
+            <input type="hidden" name="can_change_credentials" value="on">
+          {% endif %}
+          <div class="demo-box">Admin istalgan foydalanuvchining login/parolini shu formadan o'zgartira oladi. Bloklangan foydalanuvchi tizimga kira olmaydi, lekin ma'lumotlari saqlanib qoladi.</div>
+        </div>
+      {% endif %}
       <div class="form-field group-only {% if user and user.role != 'student' %}hidden{% endif %}">
         <span>Guruh</span>
         <select name="group_id">

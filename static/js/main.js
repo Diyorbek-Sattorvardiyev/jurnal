@@ -6,6 +6,20 @@ if (toggleButton && sidebar) {
   toggleButton.addEventListener("click", () => {
     sidebar.classList.toggle("open");
   });
+
+  sidebar.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    const clickedInsideSidebar = sidebar.contains(event.target);
+    const clickedToggle = toggleButton.contains(event.target);
+    if (!clickedInsideSidebar && !clickedToggle) {
+      sidebar.classList.remove("open");
+    }
+  });
 }
 
 const applyTheme = (theme) => {
@@ -66,3 +80,27 @@ document.querySelectorAll(".mode-switch input[type='radio']").forEach((radio) =>
     if (form) form.submit();
   });
 });
+
+document.querySelectorAll("form[method='post']").forEach((form) => {
+  form.addEventListener("submit", () => {
+    const submitButton = form.querySelector("button[type='submit']");
+    if (!submitButton || submitButton.dataset.confirm) return;
+    submitButton.disabled = true;
+    submitButton.dataset.originalText = submitButton.textContent;
+    submitButton.textContent = "Saqlanmoqda...";
+  });
+});
+
+const keepAlive = () => {
+  if (document.visibilityState !== "visible") return;
+
+  fetch("/keep-alive", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "X-Requested-With": "keep-alive" },
+  }).catch(() => {});
+};
+
+keepAlive();
+window.setInterval(keepAlive, 10000);
